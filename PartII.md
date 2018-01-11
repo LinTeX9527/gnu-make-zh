@@ -8,3 +8,35 @@
 - 隐含规则（Implicit rules） 是*make*内置的规则，在规则数据库中找到的模式规则或者后缀规则。有了内置的规则数据使得编写*makefiles*格外的简单，因为对于许多常用的任务*make*已经知道了文件类型，后缀和更新目标的程序。
 - 静态模式规则（Static pattern rules） 类似于常规的模式规则，除了一点，它们只针对于一列目标文件。
 
+## 明确的规则 ##
+你所写的绝大部分的规则都是明确的规则，即指明具体的文件作为目标和必备条件。**一个规则可以有多个目标**。这就意味这每一个目标都和另外其他的目标拥有相同的必备条件的集合。如果目标过时了，将会执行相同的动作来更新每一个目标。例如：
+```
+vpath.o variable.o: make.h config.h getopt.h gettext.h dep.h
+```
+表明`vpath.o` 和 `variable.o`都依赖于同样的C头文件集合，它和下面的等价：
+```
+vpath.o: make.h config.h getopt.h gettext.h dep.h
+variable.o: make.h config.h getopt.h gettext.h dep.h
+```
+
+两个目标会进行独立的处理。
+
+一条规则不必一次性定义完整。每一次*make*找到一个目标文件，就会将目标和必备条件添加到依赖图中。如果目标已经存在于依赖图中，任何其他的必备条件都会添加到那个目标文件的依赖关系中。最常见的情形是，对于把很长的一行打断，提升*makefile*文件的可读性很有用。
+```
+vpath.o: vpath.c make.h config.h getopt.h gettext.h dep.h
+vpath.o: filedef.h hash.h job.h commands.h variable.h vpath.h
+```
+
+更复杂的情形中，组成必备条件的文件是由不同的方式管理的：
+```
+# 确保在vpath.c编译之前创建lexer.c文件
+vpath.o: lexer.c
+...
+# 使用特殊的标记来编译 vpath.c 文件
+vpath.o: vpath.c
+	$(COMPILE.c) $(RULE_FLAGS) $(OUTPUT_OPTION) $<
+...
+# 包含某个程序创建的依赖关系
+include auto-generated-dependencies.d
+```
+第一个规则是说只要`lexer.c`更新了就必须要更新`vpath.o`。这个规则也确保了必要条件总是在目标更新之前先更新。
