@@ -34,3 +34,68 @@ foo.o: foo.c foo.h
 ```
 目标文件`foo.o`出现在分号之前。必备条件`foo.c`和`foo.h`在分号之后。命令通常出现在下一行且一个tab缩进。
 
+当*make*计算一条规则时，它首先会寻找必备条件和目标所代表的文件。如果任意某个必备条件有一个与之关联的规则，那么*make*就会先去更新那个规则，处理完那些规则才会更新当前的目标文件。如果任意某个必备条件比目标文件要新，才会执行命令来重新构建目标。每个命令都会传递给shell并且在新的子shell中执行。如果任意某个命令产生了错误，目标的构建就会终止并且*make*会退出。一个文件比另外一个文件要新的评判标准是这个文件是最近被修改了。
+
+这里有一个程序，用来统计输入中单词"fee"，"fie"，"foe"，"fum"出现的个数。它在`main()`中简单使用了一个*flex*扫描器。
+```C
+#include<stdio.h>
+#include<stdlib.h>
+
+extern int fee_count, fie_count, foe_count, fum_count;
+extern int yylex( void );
+
+int main( int argc, char ** argv)
+{
+	printf( "Please type some words(Ctrl-D to end):\n" );
+	yylex();
+	printf( "fee=%d\nfie=%d\nfoe=%d\nfum=%d\n", fee_count, fie_count, foe_count, fum_count );
+	exit( 0 );
+}
+```
+扫描器`lexer.l`非常简单：
+```
+%{
+	int fee_count = 0;
+	int fie_count = 0;
+	int foe_count = 0;
+	int fum_count = 0;
+%}
+
+%%
+fee fee_count++;
+fie fie_count++;
+foe foe_count++;
+fum fum_count++;
+```
+
+这个应用程序的*makefile*也是相当的简单：
+```Makefile
+count_words: count_words.o lexer.o -lfl
+	gcc count_words.o lexer.o -lfl -ocount_words
+
+count_words.o: count_words.c
+	gcc -c count_words.c
+
+lexer.o: lexer.c
+	gcc -c lexer.c
+
+lexer.c: lexer.l
+	flex -t lexer.l > lexer.c
+
+
+clean:
+	-@rm -rf *.o lexer.c count_words 2>/dev/null || true
+```
+
+第一次执行*makefile*会有以下输出：
+```
+$ make
+gcc -c count_words.c
+flex -t lexer.l > lexer.c
+gcc -c lexer.c
+gcc count_words.o lexer.o -lfl -ocount_words
+```
+
+我们得到了可执行程序。当然，通常实际的程序包含的模块远比这个例子多。
+应该注意到命令的执行顺序和*makefile*文件中规定的顺序相反。因为*makefile*通常是**自顶向下**的风格，通常目标的最通用的格式放在*makefile*的第一行，它的细节放在后面。
+
