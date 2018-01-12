@@ -152,3 +152,34 @@ fie=3
 foe=3
 fum=3
 ```
+
+
+### 调用make ###
+先前的例子有如下假设：
+
+- 工程的所有源码和make的描述文件都存放在一个单一的目录下面
+- make的描述文件名字是`makefile`或者`Makefile`或者`GNUMakefile`
+- 当执行`make`命令时`makefile`在用户当前目录
+
+在这些条件下调用`make`，它会自动地创建它找到的第一个目标。如果要更新一个不同的目标（或者更新多个目标）需要在命令行上添加目标的名字：
+```
+ % make lexer.c
+flex -t lexer.l > lexer.c
+```
+
+当`make`开始执行时，它会读取描述文件并且找到需要更新的目标。如果目标或者它的必备条件过时了（或者丢失了）规则中的命令脚本shell命令就会一个个的开始运行。在命令运行结束后`make`认为目标已经是最新的了，它会继续处理下一个目标直到退出。
+
+如果你指定的目标已经是最新的，`make`就会告诉你并且什么也不做立刻就退出了：
+```
+ % make lexer.c
+make: `lexer.c' is up to date.
+```
+
+如果你指定的目标在`makefile`中不存在，并且也没有隐含规则，`make`就会这样响应：
+```
+ % make non-existent-target
+make: *** No rule to make target `non-existent-target'.  Stop.
+```
+
+`make`有许多命令行参数。其中最有用的就是`--just-print`（简单形式为`-n`），告诉`make`只是打印它为了特定的目标将要执行的命令但实际并不执行命令。在编写*makefiles*这个选项非常的有用。这是可以做到的，在命令行中设置几乎任意的`makefile`变量来覆盖`makefile`中设置的默认值或者值的集合。
+
