@@ -114,3 +114,41 @@ gcc count_words.o lexer.o -lfl -ocount_words
 *make*需要检查的下一个必备条件是`lexer.o`。同样规则的链式结构引导到`lexer.c`但是此时这个文件并不存在。*make*发现了从`lexer.l`文件产生`lexer.c`文件的规则。因此它运行`flex`程序。现在`lexer.c`文件存在了它可以运行`gcc`命令了。
 
 最终*make*检查`-lfl`。`gcc`的选项`-l`表明必须要把系统库链接到这个程序中。**fl**指定的实际的库名称是**libfl.a**。对于这种语法，GNU make囊括了特殊的支持。当看到了必备条件是`-l<NAME>`形式的，*make*寻找`libNAME.so`形式的文件，如果没有找到，则寻找`libNAME.a`文件。在这里，*make*找到了`/usr/lib/libfl.a`并且执行了最后一个动作--链接。
+
+
+### 最小化重建 ###
+当运行我们的程序时，会发现除了打印fees, fies, foes, 和 fums，它还会打印输入文件的文本。这个不是我们所希望的。问题出在我们忘记了词法分析器中的某些规则，`flex`会把没有识别的文本打印出来。为了解决这个问题，我们仅仅添加一个*任何字符*的规则和一个新行规则：
+```
+%{
+	int fee_count = 0;
+	int fie_count = 0;
+	int foe_count = 0;
+	int fum_count = 0;
+%}
+
+%%
+fee fee_count++;
+fie fie_count++;
+foe foe_count++;
+fum fum_count++;
+.
+\n
+```
+编辑并保存文件重新构建我们的应用程序：
+```
+ % make
+flex -t lexer.l > lexer.c
+gcc -c lexer.c
+gcc count_words.o lexer.o -lfl -ocount_words
+```
+
+注意到这一次`count_words.c`文件并没有重新编译。当*make*分析规则时，它发现`count_words.o`存在并且要比它的必备条件`count_words.c`文件更新，因此没有必要更新`count_words.o`文件。当分析`lexer.c`文件时，然而*make*发现必备条件`lexer.l`文件要比目标`lexer.c`更新，因此*make*必须要更新`lexer.c`。就这样，反过来导致更新`lexer.o`和`count_words`，现在我们的字符统计程序修复了。
+
+```
+ % ./count_words < lexer.l
+Please type some words(Ctrl-D to end):
+fee=3
+fie=3
+foe=3
+fum=3
+```
