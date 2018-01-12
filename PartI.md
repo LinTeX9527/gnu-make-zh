@@ -99,3 +99,18 @@ gcc count_words.o lexer.o -lfl -ocount_words
 我们得到了可执行程序。当然，通常实际的程序包含的模块远比这个例子多。
 应该注意到命令的执行顺序和*makefile*文件中规定的顺序相反。因为*makefile*通常是**自顶向下**的风格，通常目标的最通用的格式放在*makefile*的第一行，它的细节放在后面。
 
+
+
+### 依赖检查 ###
+*make*是如何决定做什么的？再浏览一遍前面的例子。
+
+首先，*make*注意到命令行并没有包含目标，所以它决定生成默认目标--`count_words`。它检查必备条件，发现了3个：`count_words.o`, `lexer.o` 还有 `-lfl`。现在*make*思考如何编译`count_words.o`并且检查它的规则。同样*make*去检查它的必备条件，注意到`count_words.c`没有规则而且文件存在，因此*make*执行命令把`count_words.c`转换成`count_words.o`，命令如下：
+```
+	gcc -c count_words.c
+```
+
+目标到必备条件，到目标，到必备条件的链式结构是的*make*如何分析*makefile*决定执行哪个命令的标准。
+
+*make*需要检查的下一个必备条件是`lexer.o`。同样规则的链式结构引导到`lexer.c`但是此时这个文件并不存在。*make*发现了从`lexer.l`文件产生`lexer.c`文件的规则。因此它运行`flex`程序。现在`lexer.c`文件存在了它可以运行`gcc`命令了。
+
+最终*make*检查`-lfl`。`gcc`的选项`-l`表明必须要把系统库链接到这个程序中。**fl**指定的实际的库名称是**libfl.a**。对于这种语法，GNU make囊括了特殊的支持。当看到了必备条件是`-l<NAME>`形式的，*make*寻找`libNAME.so`形式的文件，如果没有找到，则寻找`libNAME.a`文件。在这里，*make*找到了`/usr/lib/libfl.a`并且执行了最后一个动作--链接。
